@@ -1,0 +1,143 @@
+import {
+  createUserWithEmailAndPassword,
+  signInWithEmailAndPassword,
+  signOut,
+  sendEmailVerification,
+  GoogleAuthProvider,
+  signInWithPopup,
+  User,
+} from 'firebase/auth';
+import { doc, setDoc, getDoc } from 'firebase/firestore';
+import { auth, db } from './firebaseConfig';
+import toast from 'react-hot-toast';
+
+if (!auth || !db) {
+  console.warn('Firebase not initialized. Please set up your Firebase config in .env.local');
+}
+
+export interface UserData {
+  name: string;
+  email: string;
+  role: 'user' | 'admin';
+  enrolledCourses?: string[]; // Array of course IDs
+}
+
+export const signUp = async (email: string, password: string, name: string) => {
+  if (!auth || !db) {
+    throw new Error('Firebase not initialized');
+  }
+  try {
+    const userCredential = await createUserWithEmailAndPassword(auth, email, password);
+    const user = userCredential.user;
+
+    // Send email verification
+    await sendEmailVerification(user);
+    
+    // Store user details in Firestore
+    const userData: UserData = {
+      name,
+      email,
+      role: 'user',
+    };
+    
+    await setDoc(doc(db, 'users', user.uid), userData);
+    
+    toast.success('Account created! Please check your email for verification.');
+    return user;
+  } catch (error: any) {
+    toast.error(error.message || 'Error creating account');
+    throw error;
+  }
+};
+
+export const signIn = async (email: string, password: string) => {
+  if (!auth || !db) {
+    throw new Error('Firebase not initialized');
+  }
+  try {
+    const userCredential = await signInWithEmailAndPassword(auth, email, password);
+    const user = userCredential.user;
+    
+    // Check if email is verified
+    if (!user.emailVerified) {
+      toast.error('Please verify your email before signing in');
+      await signOut(auth);
+      return null;
+    }
+
+    // Check if user document exists, create if not
+    const userDoc = await getDoc(doc(db, 'users', user.uid));
+    if (!userDoc.exists()) {
+      const userData: UserData = {
+        name: user.displayName || email.split('@')[0],
+        email: user.email || email,
+        role: 'user',
+      };
+      await setDoc(doc(db, 'users', user.uid), userData);
+    }
+
+    toast.success('Welcome back!');
+    return user;
+  } catch (error: any) {
+    toast.error(error.message || 'Error signing in');
+    throw error;
+  }
+};
+
+export const signInWithGoogle = async () => {
+  if (!auth || !db) {
+    throw new Error('Firebase not initialized');
+  }
+  try {
+    const provider = new GoogleAuthProvider();
+    const userCredential = await signInWithPopup(auth, provider);
+    const user = userCredential.user;
+
+    // Check if user document exists, create if not
+    const userDoc = await getDoc(doc(db, 'users', user.uid));
+    if (!userDoc.exists()) {
+      const userData: UserData = {
+        name: user.displayName || user.email?.split('@')[0] || 'User',
+        email: user.email || '',
+        role: 'user',
+      };
+      await setDoc(doc(db, 'users', user.uid), userData);
+    }
+
+    toast.success('Signed in with Google!');
+    return user;
+  } catch (error: any) {
+    toast.error(error.message || 'Error signing in with Google');
+    throw error;
+  }
+};
+
+export const logout = async () => {
+  if (!auth) {
+    throw new Error('Firebase not initialized');
+  }
+  try {
+    await signOut(auth);
+    toast.success('Signed out successfully');
+  } catch (error: any) {
+    toast.error(error.message || 'Error signing out');
+    throw error;
+  }
+};
+
+export const getUserData = async (uid: string): Promise<UserData | null> => {
+  if (!db) {
+    return null;
+  }
+  try {
+    const userDoc = await getDoc(doc(db, 'users', uid));
+    if (userDoc.exists()) {
+      return userDoc.data() as UserData;
+    }
+    return null;
+  } catch (error) {
+    console.error('Error fetching user data:', error);
+    return null;
+  }
+};
+
