@@ -33,6 +33,7 @@ export default function Sidebar({ userRole, userName, userEmail }: SidebarProps)
     { name: 'Home', href: '/dashboard/user', icon: '🏠' },
     { name: 'My Courses', href: '/dashboard/user/courses', icon: '📚' },
     { name: 'AI Quiz', href: '/dashboard/user/quiz', icon: '🧠' },
+    { name: 'Leaderboard', href: '/dashboard/user/leaderboard', icon: '🏆' },
     { name: 'Certificates', href: '/dashboard/user/certificates', icon: '🎓' },
     { name: 'Profile', href: '/dashboard/user/profile', icon: '👤' },
   ];

@@ -22,7 +22,7 @@ export interface UserData {
   enrolledCourses?: string[]; // Array of course IDs
 }
 
-export const signUp = async (email: string, password: string, name: string) => {
+export const signUp = async (email: string, password: string, name: string, role: 'user' | 'admin' = 'user') => {
   if (!auth || !db) {
     throw new Error('Firebase not initialized');
   }
@@ -37,7 +37,7 @@ export const signUp = async (email: string, password: string, name: string) => {
     const userData: UserData = {
       name,
       email,
-      role: 'user',
+      role,
     };
     
     await setDoc(doc(db, 'users', user.uid), userData);
@@ -79,7 +79,13 @@ export const signIn = async (email: string, password: string) => {
     toast.success('Welcome back!');
     return user;
   } catch (error: any) {
-    toast.error(error.message || 'Error signing in');
+    if (error?.code === 'auth/user-disabled') {
+      toast.error('This account has been disabled. Please contact support.');
+    } else if (error?.code === 'auth/invalid-credential') {
+      toast.error('Invalid email or password');
+    } else {
+      toast.error(error.message || 'Error signing in');
+    }
     throw error;
   }
 };
@@ -107,7 +113,11 @@ export const signInWithGoogle = async () => {
     toast.success('Signed in with Google!');
     return user;
   } catch (error: any) {
-    toast.error(error.message || 'Error signing in with Google');
+    if (error?.code === 'auth/user-disabled') {
+      toast.error('This Google account is disabled. Please contact support.');
+    } else {
+      toast.error(error.message || 'Error signing in with Google');
+    }
     throw error;
   }
 };

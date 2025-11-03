@@ -12,6 +12,7 @@ export default function LoginPage() {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [loading, setLoading] = useState(false);
+  const [role, setRole] = useState<'user' | 'admin'>('user');
   const router = useRouter();
 
   useEffect(() => {
@@ -32,9 +33,14 @@ export default function LoginPage() {
   const redirectUser = async (uid: string) => {
     const userData = await getUserData(uid);
     if (userData) {
-      router.push(userData.role === 'admin' ? '/dashboard/admin' : '/dashboard/user');
+      // If selection is admin, prefer admin dashboard; otherwise use stored role
+      if (role === 'admin') {
+        router.push('/dashboard/admin');
+      } else {
+        router.push(userData.role === 'admin' ? '/dashboard/admin' : '/dashboard/user');
+      }
     } else {
-      router.push('/dashboard/user');
+      router.push(role === 'admin' ? '/dashboard/admin' : '/dashboard/user');
     }
   };
 
@@ -84,6 +90,19 @@ export default function LoginPage() {
           </p>
         </div>
         <form className="mt-8 space-y-6" onSubmit={handleSubmit}>
+          <div>
+            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Log in as</label>
+            <div className="flex gap-4">
+              <label className="inline-flex items-center gap-2 text-sm text-gray-700 dark:text-gray-300">
+                <input type="radio" name="role" value="user" checked={role==='user'} onChange={()=>setRole('user')} />
+                User
+              </label>
+              <label className="inline-flex items-center gap-2 text-sm text-gray-700 dark:text-gray-300">
+                <input type="radio" name="role" value="admin" checked={role==='admin'} onChange={()=>setRole('admin')} />
+                Admin
+              </label>
+            </div>
+          </div>
           <div className="rounded-md shadow-sm -space-y-px">
             <div>
               <label htmlFor="email" className="sr-only">

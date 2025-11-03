@@ -78,9 +78,14 @@ export const getUserQuizzes = async (userId: string): Promise<Quiz[]> => {
       completedAt: doc.data().completedAt?.toDate() || new Date(),
     })) as Quiz[];
   } catch (error: any) {
+    const msg = (error?.code === 'unavailable' || /offline|Could not reach/i.test(String(error?.message)))
+      ? 'You appear to be offline. Please check your connection and try again.'
+      : 'Error fetching quizzes.';
     console.error('Error fetching quizzes:', error);
+    toast.error(msg);
     throw error;
   }
+ 
 };
 
 // Get quiz by ID
@@ -172,7 +177,10 @@ Format your response as JSON array with this structure:
 
     if (useGroq) {
       const { Groq } = await import('groq-sdk');
-      const groq = new Groq({ apiKey });
+      const groq = new Groq({ 
+        apiKey,
+        dangerouslyAllowBrowser: true 
+      });
       const completion = await groq.chat.completions.create({
         messages: [
           {
@@ -184,7 +192,8 @@ Format your response as JSON array with this structure:
             content: prompt,
           },
         ],
-        model: 'llama-3.1-70b-versatile',
+        // Updated to a supported Groq model
+        model: 'llama-3.2-90b-text-preview',
         temperature: 0.7,
       });
 

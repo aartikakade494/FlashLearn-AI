@@ -21,11 +21,16 @@ export default function DashboardPage() {
         return;
       }
 
-      // Get user role and redirect accordingly
-      const userData = await getUserData(user.uid);
-      if (userData) {
-        router.push(userData.role === 'admin' ? '/dashboard/admin' : '/dashboard/user');
-      } else {
+      try {
+        // Get user role and redirect accordingly
+        const userData = await getUserData(user.uid);
+        if (userData) {
+          router.push(userData.role === 'admin' ? '/dashboard/admin' : '/dashboard/user');
+        } else {
+          router.push('/dashboard/user');
+        }
+      } catch (e) {
+        // If Firestore is offline or fails, still send the user to the user dashboard
         router.push('/dashboard/user');
       }
     });

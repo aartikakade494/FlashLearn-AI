@@ -36,21 +36,31 @@ export default function AIQuizPage() {
   const [answers, setAnswers] = useState<number[]>([]);
   const [timeSpent, setTimeSpent] = useState(0);
   const [showResults, setShowResults] = useState(false);
+  const [checkingAuth, setCheckingAuth] = useState(true);
 
-  // Initialize auth check
+  // Initialize auth check - redirect to login if not authenticated
   useEffect(() => {
-    if (auth) {
-      const unsubscribe = auth.onAuthStateChanged(async (currentUser) => {
-        if (currentUser) {
-          setUser(currentUser);
-          const data = await getUserData(currentUser.uid);
-          setUserData(data);
-        } else {
-          router.push('/login');
-        }
-      });
-      return () => unsubscribe();
+    if (!auth) {
+      setCheckingAuth(false);
+      toast.error('Please log in to access AI Quiz');
+      router.push('/login');
+      return;
     }
+
+    const unsubscribe = auth.onAuthStateChanged(async (currentUser) => {
+      setCheckingAuth(false);
+      if (currentUser && currentUser.emailVerified) {
+        setUser(currentUser);
+        const data = await getUserData(currentUser.uid);
+        setUserData(data);
+      } else {
+        // User not authenticated or email not verified
+        toast.error('Please log in to access AI Quiz');
+        router.push('/login');
+      }
+    });
+    
+    return () => unsubscribe();
   }, [router]);
 
   // Timer effect
@@ -162,6 +172,23 @@ export default function AIQuizPage() {
   const handleSubmit = () => {
     setShowResults(true);
   };
+
+  // Show loading screen while checking auth
+  if (checkingAuth) {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-blue-50 via-white to-purple-50 dark:from-gray-900 dark:via-gray-800 dark:to-gray-900">
+        <div className="text-center">
+          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto mb-4"></div>
+          <p className="text-gray-600 dark:text-gray-400">Checking authentication...</p>
+        </div>
+      </div>
+    );
+  }
+
+  // If not authenticated, don't render (will redirect)
+  if (!user || !user.emailVerified) {
+    return null;
+  }
 
   if (showResults) {
     return (

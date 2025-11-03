@@ -206,13 +206,15 @@ export const getLessonsByCourseId = async (courseId: string): Promise<Lesson[]> 
   }
   try {
     const lessonsRef = collection(db, 'lessons');
-    const q = query(lessonsRef, where('courseId', '==', courseId), orderBy('order', 'asc'));
+    // Avoid composite index requirement by sorting on the client
+    const q = query(lessonsRef, where('courseId', '==', courseId));
     const snapshot = await getDocs(q);
-    return snapshot.docs.map((doc) => ({
+    const items = snapshot.docs.map((doc) => ({
       id: doc.id,
       ...doc.data(),
       createdAt: doc.data().createdAt?.toDate() || new Date(),
     })) as Lesson[];
+    return items.sort((a, b) => (a.order ?? 0) - (b.order ?? 0));
   } catch (error: any) {
     console.error('Error fetching lessons:', error);
     throw error;

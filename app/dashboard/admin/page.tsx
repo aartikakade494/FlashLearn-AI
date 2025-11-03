@@ -5,6 +5,7 @@ import { motion } from 'framer-motion';
 import { User } from 'firebase/auth';
 import { auth } from '@/lib/firebaseConfig';
 import { getUserData, UserData } from '@/lib/auth';
+import { getAnalyticsData } from '@/lib/analytics';
 import Sidebar from '@/components/Sidebar';
 import PageTransition from '@/components/PageTransition';
 import AuthGuard from '@/components/AuthGuard';
@@ -13,6 +14,12 @@ export default function AdminDashboardPage() {
   const [user, setUser] = useState<User | null>(null);
   const [userData, setUserData] = useState<UserData | null>(null);
   const [loading, setLoading] = useState(true);
+  const [stats, setStats] = useState({
+    totalUsers: 0,
+    totalCourses: 0,
+    totalQuizzes: 0,
+    totalCertificates: 0,
+  });
 
   useEffect(() => {
     if (!auth) {
@@ -25,6 +32,19 @@ export default function AdminDashboardPage() {
         setUser(currentUser);
         const data = await getUserData(currentUser.uid);
         setUserData(data);
+        
+        // Load analytics data
+        try {
+          const analyticsData = await getAnalyticsData();
+          setStats({
+            totalUsers: analyticsData.totalUsers,
+            totalCourses: analyticsData.totalCourses,
+            totalQuizzes: analyticsData.totalQuizAttempts,
+            totalCertificates: analyticsData.totalCertificates,
+          });
+        } catch (error) {
+          console.error('Error loading stats:', error);
+        }
       }
       setLoading(false);
     });
@@ -79,7 +99,7 @@ export default function AdminDashboardPage() {
                     <div className="flex items-center justify-between">
                       <div>
                         <p className="text-gray-500 dark:text-gray-400 text-sm">Total Users</p>
-                        <p className="text-3xl font-bold text-gray-900 dark:text-white mt-2">0</p>
+                        <p className="text-3xl font-bold text-gray-900 dark:text-white mt-2">{stats.totalUsers}</p>
                       </div>
                       <div className="text-4xl">👥</div>
                     </div>
@@ -95,7 +115,7 @@ export default function AdminDashboardPage() {
                     <div className="flex items-center justify-between">
                       <div>
                         <p className="text-gray-500 dark:text-gray-400 text-sm">Total Courses</p>
-                        <p className="text-3xl font-bold text-gray-900 dark:text-white mt-2">0</p>
+                        <p className="text-3xl font-bold text-gray-900 dark:text-white mt-2">{stats.totalCourses}</p>
                       </div>
                       <div className="text-4xl">📚</div>
                     </div>
@@ -110,8 +130,8 @@ export default function AdminDashboardPage() {
                   >
                     <div className="flex items-center justify-between">
                       <div>
-                        <p className="text-gray-500 dark:text-gray-400 text-sm">Active Quizzes</p>
-                        <p className="text-3xl font-bold text-gray-900 dark:text-white mt-2">0</p>
+                        <p className="text-gray-500 dark:text-gray-400 text-sm">Total Quiz Attempts</p>
+                        <p className="text-3xl font-bold text-gray-900 dark:text-white mt-2">{stats.totalQuizzes}</p>
                       </div>
                       <div className="text-4xl">🧠</div>
                     </div>
@@ -127,7 +147,7 @@ export default function AdminDashboardPage() {
                     <div className="flex items-center justify-between">
                       <div>
                         <p className="text-gray-500 dark:text-gray-400 text-sm">Certificates Issued</p>
-                        <p className="text-3xl font-bold text-gray-900 dark:text-white mt-2">0</p>
+                        <p className="text-3xl font-bold text-gray-900 dark:text-white mt-2">{stats.totalCertificates}</p>
                       </div>
                       <div className="text-4xl">🎓</div>
                     </div>

@@ -2,11 +2,32 @@
 
 import { motion } from 'framer-motion';
 import Link from 'next/link';
-import Footer from '@/components/Footer';
+import dynamic from 'next/dynamic';
+
+// Lazy load Footer component for better performance
+const Footer = dynamic(() => import('@/components/Footer'), {
+  ssr: true,
+});
 
 export default function Home() {
   return (
     <div className="min-h-screen bg-gradient-to-br from-blue-50 via-white to-purple-50 dark:from-gray-900 dark:via-gray-800 dark:to-gray-900">
+      {/* Simple Header with Login / Sign Up */}
+      <header className="w-full">
+        <div className="container mx-auto px-4 py-4 flex items-center justify-between">
+          <Link href="/" className="text-xl font-bold bg-gradient-to-r from-blue-600 to-purple-600 bg-clip-text text-transparent">
+            FlashLearn
+          </Link>
+          <div className="flex gap-3">
+            <Link href="/login" className="px-4 py-2 rounded-lg border border-gray-300 dark:border-gray-700 text-gray-800 dark:text-white bg-white dark:bg-gray-800">
+              Log in
+            </Link>
+            <Link href="/signup" className="px-4 py-2 rounded-lg text-white bg-gradient-to-r from-blue-600 to-purple-600">
+              Sign up
+            </Link>
+          </div>
+        </div>
+      </header>
       {/* Hero Section */}
       <main className="container mx-auto px-4 py-20">
         <motion.div
@@ -41,19 +62,19 @@ export default function Home() {
           >
             <motion.div whileHover={{ scale: 1.05 }} whileTap={{ scale: 0.95 }}>
               <Link
-                href="/dashboard"
+                href="/login"
                 className="px-8 py-4 bg-gradient-to-r from-blue-600 to-purple-600 text-white rounded-lg font-semibold text-lg shadow-lg hover:shadow-xl transition-shadow"
               >
-                Browse Courses
+                Browse Courses (Login Required)
               </Link>
             </motion.div>
             
             <motion.div whileHover={{ scale: 1.05 }} whileTap={{ scale: 0.95 }}>
               <Link
-                href="/ai-quiz"
+                href="/login"
                 className="px-8 py-4 bg-white dark:bg-gray-800 text-gray-800 dark:text-white rounded-lg font-semibold text-lg shadow-lg hover:shadow-xl transition-shadow border-2 border-gray-200 dark:border-gray-700"
               >
-                Try AI Quiz
+                Try AI Quiz (Login Required)
               </Link>
             </motion.div>
             
@@ -63,6 +84,15 @@ export default function Home() {
                 className="px-8 py-4 bg-gradient-to-r from-purple-600 to-pink-600 text-white rounded-lg font-semibold text-lg shadow-lg hover:shadow-xl transition-shadow"
               >
                 Join Now
+              </Link>
+            </motion.div>
+            
+            <motion.div whileHover={{ scale: 1.05 }} whileTap={{ scale: 0.95 }}>
+              <Link
+                href="/contact"
+                className="px-8 py-4 bg-white dark:bg-gray-800 text-gray-800 dark:text-white rounded-lg font-semibold text-lg shadow-lg hover:shadow-xl transition-shadow border-2 border-gray-200 dark:border-gray-700"
+              >
+                Contact Us
               </Link>
             </motion.div>
           </motion.div>

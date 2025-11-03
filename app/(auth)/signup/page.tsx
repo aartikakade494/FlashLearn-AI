@@ -1,5 +1,4 @@
 'use client';
-
 import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import { motion } from 'framer-motion';
@@ -13,29 +12,59 @@ export default function SignupPage() {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [loading, setLoading] = useState(false);
+  const [isMounted, setIsMounted] = useState(false);
+  const [isCheckingAuth, setIsCheckingAuth] = useState(true);
+  const [role, setRole] = useState<'user' | 'admin'>('user');
   const router = useRouter();
 
+  // Ensure we leave the initial loading state
   useEffect(() => {
-    if (!auth) return;
-    const unsubscribe = onAuthStateChanged(auth, async (user) => {
-      if (user && user.emailVerified) {
-        const userData = await getUserData(user.uid);
-        if (userData) {
-          router.push(userData.role === 'admin' ? '/dashboard/admin' : '/dashboard/user');
-        } else {
-          router.push('/dashboard/user');
+    setIsMounted(true);
+  }, []);
+
+  useEffect(() => {
+    if (!isMounted) return;
+
+    const timer = setTimeout(async () => {
+      try {
+        const user = auth?.currentUser || null;
+        if (user && user.emailVerified) {
+          const userData = await getUserData(user.uid);
+          router.push(userData?.role === 'admin' ? '/dashboard/admin' : '/dashboard/user');
         }
+      } catch (e) {
+        // Non-fatal: stay on signup
+      } finally {
+        setIsCheckingAuth(false);
       }
-    });
-    return () => unsubscribe();
-  }, [router]);
+    }, 100);
+
+    return () => clearTimeout(timer);
+  }, [router, isMounted]);
+
+// ... rest of the code ...
+
+  if (!isMounted || isCheckingAuth) {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-blue-50 via-white to-purple-50 dark:from-gray-900 dark:via-gray-800 dark:to-gray-900">
+        <div className="text-center">
+          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto mb-4"></div>
+          <p className="text-gray-600 dark:text-gray-400">Loading...</p>
+        </div>
+      </div>
+    );
+  }
 
   const redirectUser = async (uid: string) => {
-    const userData = await getUserData(uid);
-    if (userData) {
-      router.push(userData.role === 'admin' ? '/dashboard/admin' : '/dashboard/user');
-    } else {
-      router.push('/dashboard/user');
+    try {
+      const userData = await getUserData(uid);
+      if (userData) {
+        router.push(userData.role === 'admin' ? '/dashboard/admin' : '/dashboard/user');
+      } else {
+        router.push('/dashboard/user');
+      }
+    } catch (error) {
+      console.error('Error redirecting user:', error);
     }
   };
 
@@ -43,11 +72,12 @@ export default function SignupPage() {
     e.preventDefault();
     setLoading(true);
     try {
-      await signUp(email, password, name);
+      await signUp(email, password, name, role);
       // Don't redirect immediately - user needs to verify email first
       router.push('/login');
     } catch (error) {
       console.error('Signup error:', error);
+      // Keep user on signup page on error
     } finally {
       setLoading(false);
     }
@@ -85,6 +115,19 @@ export default function SignupPage() {
         </div>
         <form className="mt-8 space-y-6" onSubmit={handleSubmit}>
           <div className="rounded-md shadow-sm space-y-4">
+            <div>
+              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Sign up as</label>
+              <div className="flex gap-4">
+                <label className="inline-flex items-center gap-2 text-sm text-gray-700 dark:text-gray-300">
+                  <input type="radio" name="role" value="user" checked={role==='user'} onChange={()=>setRole('user')} />
+                  User
+                </label>
+                <label className="inline-flex items-center gap-2 text-sm text-gray-700 dark:text-gray-300">
+                  <input type="radio" name="role" value="admin" checked={role==='admin'} onChange={()=>setRole('admin')} />
+                  Admin
+                </label>
+              </div>
+            </div>
             <div>
               <label htmlFor="name" className="sr-only">
                 Full Name
@@ -207,4 +250,3 @@ export default function SignupPage() {
     </div>
   );
 }
-
