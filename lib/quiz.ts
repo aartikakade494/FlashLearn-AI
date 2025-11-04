@@ -66,17 +66,18 @@ export const getUserQuizzes = async (userId: string): Promise<Quiz[]> => {
   }
   try {
     const quizzesRef = collection(db, 'quizzes');
+    // Avoid composite index by filtering only, then sorting client-side
     const q = query(
       quizzesRef,
-      where('userId', '==', userId),
-      orderBy('completedAt', 'desc')
+      where('userId', '==', userId)
     );
     const snapshot = await getDocs(q);
-    return snapshot.docs.map((doc) => ({
+    const items = snapshot.docs.map((doc) => ({
       id: doc.id,
       ...doc.data(),
       completedAt: doc.data().completedAt?.toDate() || new Date(),
     })) as Quiz[];
+    return items.sort((a, b) => (b.completedAt as Date).getTime() - (a.completedAt as Date).getTime());
   } catch (error: any) {
     const msg = (error?.code === 'unavailable' || /offline|Could not reach/i.test(String(error?.message)))
       ? 'You appear to be offline. Please check your connection and try again.'
@@ -146,7 +147,7 @@ export const extractTextFromAudio = async (file: File): Promise<string> => {
 // Generate quiz questions using AI (GROQ or OpenAI)
 export const generateQuizQuestions = async (
   text: string,
-  numQuestions: number = 5
+  numQuestions: number = 20
 ): Promise<QuizQuestion[]> => {
   try {
     // Check if API key is available
@@ -192,8 +193,8 @@ Format your response as JSON array with this structure:
             content: prompt,
           },
         ],
-        // Updated to a supported Groq model
-        model: 'llama-3.2-90b-text-preview',
+        // Use a currently supported Groq model
+        model: 'llama-3.3-70b-versatile',
         temperature: 0.7,
       });
 

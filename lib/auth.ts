@@ -113,7 +113,11 @@ export const signInWithGoogle = async () => {
     toast.success('Signed in with Google!');
     return user;
   } catch (error: any) {
-    if (error?.code === 'auth/user-disabled') {
+    if (error?.code === 'auth/popup-closed-by-user') {
+      // User closed the popup; treat as a silent cancel instead of an error
+      toast('Sign-in cancelled');
+      return null;
+    } else if (error?.code === 'auth/user-disabled') {
       toast.error('This Google account is disabled. Please contact support.');
     } else {
       toast.error(error.message || 'Error signing in with Google');

@@ -32,6 +32,21 @@ export default function CoursePlayerPage() {
   const [currentLesson, setCurrentLesson] = useState<Lesson | null>(null);
   const [progress, setProgress] = useState<CourseProgress | null>(null);
   const [selectedLessonId, setSelectedLessonId] = useState<string | null>(null);
+  const toEmbed = (url: string) => {
+    try {
+      const u = new URL(url);
+      if (u.hostname.includes('youtube.com') || u.hostname === 'youtu.be') {
+        let id = '';
+        if (u.hostname === 'youtu.be') id = u.pathname.replace('/', '');
+        else if (u.searchParams.get('v')) id = u.searchParams.get('v') as string;
+        else if (u.pathname.startsWith('/embed/')) id = u.pathname.split('/').pop() || '';
+        if (id) return `https://www.youtube.com/embed/${id}`;
+      }
+      return url;
+    } catch {
+      return url;
+    }
+  };
 
   useEffect(() => {
     if (!auth) {
@@ -241,7 +256,7 @@ export default function CoursePlayerPage() {
                         <div className="aspect-video bg-black">
                           {currentLesson.videoURL ? (
                             <iframe
-                              src={currentLesson.videoURL}
+                              src={toEmbed(currentLesson.videoURL)}
                               className="w-full h-full"
                               allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
                               allowFullScreen
@@ -262,6 +277,12 @@ export default function CoursePlayerPage() {
                           <p className="text-gray-600 dark:text-gray-400 mb-6">
                             {currentLesson.description}
                           </p>
+                          {currentLesson.notes && (
+                            <div className="prose dark:prose-invert max-w-none mb-6">
+                              <h3 className="text-lg font-semibold mb-2">Notes</h3>
+                              <p className="whitespace-pre-wrap">{currentLesson.notes}</p>
+                            </div>
+                          )}
                           
                           {!isLessonComplete(currentLesson.id!) && (
                             <motion.button

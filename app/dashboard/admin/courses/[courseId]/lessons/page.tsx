@@ -33,6 +33,7 @@ export default function AdminLessonsPage() {
   const [formData, setFormData] = useState({
     title: '',
     description: '',
+    notes: '',
     videoURL: '',
     duration: 0,
     order: 0,
@@ -211,6 +212,11 @@ export default function AdminLessonsPage() {
                           <p className="text-gray-600 dark:text-gray-400 mb-2 ml-11">
                             {lesson.description}
                           </p>
+                          {lesson.notes && (
+                            <p className="text-gray-500 dark:text-gray-400 mb-2 ml-11 whitespace-pre-wrap line-clamp-3">
+                              {lesson.notes}
+                            </p>
+                          )}
                           <div className="flex items-center gap-4 ml-11 text-sm text-gray-500 dark:text-gray-400">
                             <span>⏱️ {lesson.duration} min</span>
                             {lesson.videoURL && (
@@ -292,6 +298,18 @@ export default function AdminLessonsPage() {
                             rows={3}
                             value={formData.description}
                             onChange={(e) => setFormData({ ...formData, description: e.target.value })}
+                            className="w-full px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:ring-2 focus:ring-blue-500"
+                          />
+                        </div>
+
+                        <div>
+                          <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                            Notes (AI-generated)
+                          </label>
+                          <textarea
+                            rows={6}
+                            value={formData.notes}
+                            onChange={(e) => setFormData({ ...formData, notes: e.target.value })}
                             className="w-full px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:ring-2 focus:ring-blue-500"
                           />
                         </div>

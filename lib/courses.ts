@@ -15,6 +15,18 @@ import { ref, uploadBytes, getDownloadURL, deleteObject } from 'firebase/storage
 import { db, storage } from './firebaseConfig';
 import toast from 'react-hot-toast';
 
+// Remove undefined fields to satisfy Firestore constraints
+const removeUndefined = <T extends Record<string, any>>(obj: T): T => {
+  const cleaned: Record<string, any> = {};
+  Object.keys(obj).forEach((key) => {
+    const value = (obj as any)[key];
+    if (value !== undefined) {
+      cleaned[key] = value;
+    }
+  });
+  return cleaned as T;
+};
+
 // Course Data Model
 export interface Course {
   id?: string;
@@ -41,6 +53,7 @@ export interface Lesson {
   courseId: string;
   title: string;
   description: string;
+  notes?: string;
   videoURL: string;
   duration: number; // in minutes
   order: number; // Order in the course
@@ -55,6 +68,21 @@ export interface CourseProgress {
   progress: number; // 0-100
   lastAccessed: Timestamp | Date;
   completedAt?: Timestamp | Date;
+}
+
+// Course Quiz Model (admin-generated quiz for a course)
+export interface CourseQuizQuestion {
+  question: string;
+  options: string[];
+  correctAnswer: number;
+  explanation?: string;
+}
+
+export interface CourseQuiz {
+  id?: string;
+  courseId: string;
+  questions: CourseQuizQuestion[];
+  createdAt: Timestamp | Date;
 }
 
 // Get all courses
@@ -111,7 +139,7 @@ export const createCourse = async (courseData: Omit<Course, 'id' | 'createdAt' |
   try {
     const coursesRef = collection(db, 'courses');
     const newCourseRef = doc(coursesRef);
-    const course = {
+    const course = removeUndefined({
       ...courseData,
       lessons: courseData.lessons || [],
       enrolledStudents: courseData.enrolledStudents || [],
@@ -119,7 +147,7 @@ export const createCourse = async (courseData: Omit<Course, 'id' | 'createdAt' |
       totalRatings: courseData.totalRatings || 0,
       createdAt: Timestamp.now(),
       updatedAt: Timestamp.now(),
-    };
+    });
     await setDoc(newCourseRef, course);
     toast.success('Course created successfully!');
     return newCourseRef.id;
@@ -137,10 +165,10 @@ export const updateCourse = async (courseId: string, courseData: Partial<Course>
   }
   try {
     const courseRef = doc(db, 'courses', courseId);
-    await updateDoc(courseRef, {
+    await updateDoc(courseRef, removeUndefined({
       ...courseData,
       updatedAt: Timestamp.now(),
-    });
+    }));
     toast.success('Course updated successfully!');
   } catch (error: any) {
     console.error('Error updating course:', error);
@@ -221,6 +249,48 @@ export const getLessonsByCourseId = async (courseId: string): Promise<Lesson[]> 
   }
 };
 
+// Create course quiz
+export const createCourseQuiz = async (courseId: string, questions: CourseQuizQuestion[]): Promise<string> => {
+  if (!db) {
+    throw new Error('Firebase not initialized');
+  }
+  try {
+    const quizRef = doc(collection(db, 'courseQuizzes'));
+    const payload: CourseQuiz = removeUndefined({
+      courseId,
+      questions: (questions || []).map(q => removeUndefined(q)),
+      createdAt: Timestamp.now(),
+    });
+    await setDoc(quizRef, payload as any);
+    return quizRef.id;
+  } catch (error: any) {
+    console.error('Error creating course quiz:', error);
+    toast.error('Error creating course quiz');
+    throw error;
+  }
+};
+
+// Get course quiz by courseId
+export const getCourseQuizByCourseId = async (courseId: string): Promise<CourseQuiz | null> => {
+  if (!db) {
+    throw new Error('Firebase not initialized');
+  }
+  try {
+    const quizzesRef = collection(db, 'courseQuizzes');
+    const qy = query(quizzesRef, where('courseId', '==', courseId));
+    const snap = await getDocs(qy);
+    const first = snap.docs[0];
+    if (first) {
+      const data = first.data() as CourseQuiz;
+      return { id: first.id, ...data, createdAt: (data.createdAt as any)?.toDate?.() || new Date() };
+    }
+    return null;
+  } catch (error: any) {
+    console.error('Error fetching course quiz:', error);
+    throw error;
+  }
+};
+
 // Get lesson by ID
 export const getLessonById = async (lessonId: string): Promise<Lesson | null> => {
   if (!db) {
@@ -251,10 +321,10 @@ export const createLesson = async (lessonData: Omit<Lesson, 'id' | 'createdAt'>)
   try {
     const lessonsRef = collection(db, 'lessons');
     const newLessonRef = doc(lessonsRef);
-    const lesson = {
+    const lesson = removeUndefined({
       ...lessonData,
       createdAt: Timestamp.now(),
-    };
+    });
     await setDoc(newLessonRef, lesson);
 
     // Update course lessons array

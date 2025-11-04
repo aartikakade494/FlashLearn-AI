@@ -5,7 +5,8 @@ import { motion } from 'framer-motion';
 import { User } from 'firebase/auth';
 import { auth } from '@/lib/firebaseConfig';
 import { getUserData, UserData } from '@/lib/auth';
-import { getAllCourses, createCourse, updateCourse, deleteCourse, uploadCourseImage, Course } from '@/lib/courses';
+import { getAllCourses, updateCourse, deleteCourse, Course } from '@/lib/courses';
+import { generateAndCreateCourse } from '@/lib/coursesAI';
 import Sidebar from '@/components/Sidebar';
 import PageTransition from '@/components/PageTransition';
 import AuthGuard from '@/components/AuthGuard';
@@ -26,7 +27,6 @@ export default function AdminCoursesPage() {
     level: 'beginner' as 'beginner' | 'intermediate' | 'advanced',
     duration: 0,
   });
-  const [imageFile, setImageFile] = useState<File | null>(null);
   const [imagePreview, setImagePreview] = useState<string>('');
 
   useEffect(() => {
@@ -83,26 +83,32 @@ export default function AdminCoursesPage() {
       });
       setImagePreview('');
     }
-    setImageFile(null);
     setShowModal(true);
   };
 
   const handleCloseModal = () => {
     setShowModal(false);
     setEditingCourse(null);
-    setImageFile(null);
     setImagePreview('');
   };
 
-  const handleImageChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    if (e.target.files && e.target.files[0]) {
-      const file = e.target.files[0];
-      setImageFile(file);
-      const reader = new FileReader();
-      reader.onloadend = () => {
-        setImagePreview(reader.result as string);
-      };
-      reader.readAsDataURL(file);
+  const handleGenerateAI = async () => {
+    if (!user || !userData) return;
+    try {
+      const { courseId } = await generateAndCreateCourse({
+        title: formData.title,
+        description: formData.description,
+        category: formData.category,
+        price: formData.price,
+        duration: formData.duration,
+        level: formData.level,
+        instructor: formData.instructor,
+        instructorId: user.uid,
+      });
+      await loadCourses();
+      handleCloseModal();
+    } catch (e) {
+      console.error('AI generation failed:', e);
     }
   };
 
@@ -111,21 +117,10 @@ export default function AdminCoursesPage() {
     if (!user || !userData) return;
 
     try {
-      let imageURL = imagePreview;
-
-      // Upload image if new file selected
-      if (imageFile && !editingCourse) {
-        // For new course, we'll upload after creating
-        imageURL = '';
-      } else if (imageFile && editingCourse) {
-        // For editing, upload immediately
-        imageURL = await uploadCourseImage(imageFile, editingCourse.id!);
-      }
-
       const courseData = {
         ...formData,
         instructorId: user.uid,
-        imageURL: imageURL || editingCourse?.imageURL,
+        imageURL: imagePreview || editingCourse?.imageURL,
         rating: editingCourse?.rating || 0,
         totalRatings: editingCourse?.totalRatings || 0,
         lessons: editingCourse?.lessons || [],
@@ -134,13 +129,6 @@ export default function AdminCoursesPage() {
 
       if (editingCourse) {
         await updateCourse(editingCourse.id!, courseData);
-      } else {
-        const courseId = await createCourse(courseData);
-        // Upload image after course creation
-        if (imageFile) {
-          const uploadedURL = await uploadCourseImage(imageFile, courseId);
-          await updateCourse(courseId, { imageURL: uploadedURL });
-        }
       }
 
       await loadCourses();
@@ -387,32 +375,37 @@ export default function AdminCoursesPage() {
                           />
                         </div>
 
-                        <div>
-                          <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-                            Course Image
-                          </label>
-                          <input
-                            type="file"
-                            accept="image/*"
-                            onChange={handleImageChange}
-                            className="w-full px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:ring-2 focus:ring-blue-500"
-                          />
-                          {imagePreview && (
+                        {/* Image upload removed: thumbnails are generated automatically */}
+                        {imagePreview && (
+                          <div>
+                            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                              Generated Thumbnail
+                            </label>
                             <img
                               src={imagePreview}
                               alt="Preview"
-                              className="mt-4 w-full h-48 object-cover rounded-lg"
+                              className="mt-1 w-full h-48 object-cover rounded-lg"
                             />
-                          )}
-                        </div>
+                          </div>
+                        )}
 
                         <div className="flex gap-4 pt-4">
-                          <button
-                            type="submit"
-                            className="flex-1 px-6 py-3 bg-gradient-to-r from-blue-500 to-purple-500 text-white rounded-lg font-semibold hover:from-blue-600 hover:to-purple-600 transition-colors"
-                          >
-                            {editingCourse ? 'Update Course' : 'Create Course'}
-                          </button>
+                          {editingCourse ? (
+                            <button
+                              type="submit"
+                              className="flex-1 px-6 py-3 bg-gradient-to-r from-blue-500 to-purple-500 text-white rounded-lg font-semibold hover:from-blue-600 hover:to-purple-600 transition-colors"
+                            >
+                              Update Course
+                            </button>
+                          ) : (
+                            <button
+                              type="button"
+                              onClick={handleGenerateAI}
+                              className="flex-1 px-6 py-3 bg-gradient-to-r from-green-500 to-emerald-600 text-white rounded-lg font-semibold hover:from-green-600 hover:to-emerald-700 transition-colors"
+                            >
+                              Generate Course
+                            </button>
+                          )}
                           <button
                             type="button"
                             onClick={handleCloseModal}

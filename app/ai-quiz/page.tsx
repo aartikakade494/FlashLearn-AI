@@ -137,7 +137,7 @@ export default function AIQuizPage() {
       }
 
       toast.success('Generating quiz questions...');
-      const generatedQuestions = await generateQuizQuestions(extractedText, 5);
+      const generatedQuestions = await generateQuizQuestions(extractedText, 20);
       setQuestions(generatedQuestions);
       setAnswers(new Array(generatedQuestions.length).fill(-1));
       setCurrentQuestion(0);
