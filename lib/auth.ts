@@ -59,11 +59,11 @@ export const signIn = async (email: string, password: string) => {
     const user = userCredential.user;
     
     // Check if email is verified
-    if (!user.emailVerified) {
-      toast.error('Please verify your email before signing in');
-      await signOut(auth);
-      return null;
-    }
+   // if (!user.emailVerified) {
+     // toast.error('Please verify your email before signing in');
+      //await signOut(auth);
+      //return null;
+    //}
 
     // Check if user document exists, create if not
     const userDoc = await getDoc(doc(db, 'users', user.uid));
@@ -79,10 +79,17 @@ export const signIn = async (email: string, password: string) => {
     toast.success('Welcome back!');
     return user;
   } catch (error: any) {
+    console.error('Login error details:',error);
     if (error?.code === 'auth/user-disabled') {
       toast.error('This account has been disabled. Please contact support.');
     } else if (error?.code === 'auth/invalid-credential') {
       toast.error('Invalid email or password');
+    }else if (error?.code === 'auth/user-not-found') {
+      toast.error('No account found with this email. Please sign up first.');
+    } else if (error?.code === 'auth/wrong-password') {
+      toast.error('Incorrect password. Please try again.');
+    } else if (error?.code === 'auth/too-many-requests') {
+      toast.error('Too many failed attempts. Please try again later.');
     } else {
       toast.error(error.message || 'Error signing in');
     }
